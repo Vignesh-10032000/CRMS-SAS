@@ -21,7 +21,8 @@ export function AppProvider({ children }) {
   const [messages, setMessages] = useState([]);
   const [calendarEvents, setCalendarEvents] = useState([]);
   const [users, setUsers] = useState([]);
-  
+  const [settings, setSettings] = useState([]);
+  const [rolePermissions, setRolePermissions] = useState({});
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
@@ -40,7 +41,7 @@ export function AppProvider({ children }) {
       setLeads([]); setContacts([]); setTasks([]);
       setDeals({ New: [], Contacted: [], Proposal: [], Won: [] });
       setDashboardMetrics(null); setReportsData(null);
-      setInvoices([]); setTickets([]); setProjects([]); setMessages([]); setCalendarEvents([]); setUsers([]);
+      setInvoices([]); setTickets([]); setProjects([]); setMessages([]); setCalendarEvents([]); setUsers([]); setSettings([]); setRolePermissions({});
       return;
     }
 
@@ -48,7 +49,8 @@ export function AppProvider({ children }) {
       const headers = fetchHeaders();
       const [
         leadsRes, contactsRes, tasksRes, dealsRes, metricsRes, reportsRes,
-        invoicesRes, ticketsRes, projectsRes, messagesRes, calendarRes, usersRes
+        invoicesRes, ticketsRes, projectsRes, messagesRes, calendarRes, usersRes,
+        settingsRes, rolesRes
       ] = await Promise.all([
         fetch(`${API_URL}/leads`, { headers }),
         fetch(`${API_URL}/contacts`, { headers }),
@@ -61,7 +63,9 @@ export function AppProvider({ children }) {
         fetch(`${API_URL}/projects`, { headers }),
         fetch(`${API_URL}/communications`, { headers }),
         fetch(`${API_URL}/calendar`, { headers }),
-        fetch(`${API_URL}/users`, { headers }) // For admin and assignment dropdowns
+        fetch(`${API_URL}/users`, { headers }), // For admin and assignment dropdowns
+        fetch(`${API_URL}/admin/settings`, { headers }).catch(() => ({ ok: false })),
+        fetch(`${API_URL}/admin/roles`, { headers }).catch(() => ({ ok: false }))
       ]);
 
       if (leadsRes.ok) setLeads(await leadsRes.json());
@@ -77,6 +81,8 @@ export function AppProvider({ children }) {
       if (messagesRes.ok) setMessages(await messagesRes.json());
       if (calendarRes.ok) setCalendarEvents(await calendarRes.json());
       if (usersRes.ok) setUsers(await usersRes.json());
+      if (settingsRes && settingsRes.ok) setSettings(await settingsRes.json());
+      if (rolesRes && rolesRes.ok) setRolePermissions(await rolesRes.json());
     } catch (error) {
       console.error('Error loading data:', error);
     }
@@ -313,11 +319,26 @@ export function AppProvider({ children }) {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   }, []);
 
+  // ADMIN SETTINGS
+  const updateSetting = useCallback(async (key, value, category) => {
+    try {
+      const res = await fetch(`${API_URL}/admin/settings`, { method: 'PUT', headers: fetchHeaders(), body: JSON.stringify({ key, value, category }) });
+      if (res.ok) { const updated = await res.json(); setSettings(prev => { const idx = prev.findIndex(s => s.key === key); if (idx >= 0) { const newSettings = [...prev]; newSettings[idx] = updated; return newSettings; } return [...prev, updated]; }); }
+    } catch (error) { console.error(error); }
+  }, []);
+
+  const toggleRolePermission = useCallback(async (role, permission, enabled) => {
+    try {
+      const res = await fetch(`${API_URL}/admin/roles`, { method: 'PUT', headers: fetchHeaders(), body: JSON.stringify({ role, permission, enabled }) });
+      if (res.ok) { const updatedPerms = await res.json(); setRolePermissions(prev => ({ ...prev, [role]: updatedPerms })); }
+    } catch (error) { console.error(error); }
+  }, []);
+
   return (
     <AppContext.Provider value={{
       leads, setLeads, addLead, updateLead, deleteLead,
       contacts, setContacts, addContact, updateContact, deleteContact,
-      deals, setDeals, moveDeal, addDeal,
+      deals, setDeals, moveDeal, addDeal, updateDeal, deleteDeal,
       tasks, setTasks, addTask, updateTask, deleteTask, toggleTask,
       dashboardMetrics, reportsData, loadData,
       notifications, unreadNotifications, markNotificationRead, markAllRead,
@@ -326,7 +347,7 @@ export function AppProvider({ children }) {
       projects, setProjects, addProject, updateProject, deleteProject,
       messages, setMessages, addMessage, updateMessage, deleteMessage,
       calendarEvents, setCalendarEvents, addCalendarEvent, updateCalendarEvent, deleteCalendarEvent,
-      users, setUsers,
+      users, setUsers, settings, updateSetting, rolePermissions, toggleRolePermission,
       sidebarCollapsed, setSidebarCollapsed,
       mobileSidebarOpen, setMobileSidebarOpen,
     }}>

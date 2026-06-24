@@ -186,3 +186,19 @@ model Message {
   assignedToId String
   assignedTo   User      @relation(fields: [assignedToId], references: [id])
 }
+
+model SystemSetting {
+  id        String   @id @default(uuid())
+  category  String   // e.g., "General", "Security", "Integrations"
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model RolePermission {
+  id          String   @id @default(uuid())
+  role        String
+  permission  String
+  
+  @@unique([role, permission])
+}

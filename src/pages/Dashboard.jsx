@@ -29,7 +29,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 export default function Dashboard() {
-  const { leads, tasks, deals, dashboardMetrics } = useApp();
+  const { leads, tasks, deals, dashboardMetrics, reportsData } = useApp();
   const { user } = useAuth();
   const navigate = useNavigate();
 

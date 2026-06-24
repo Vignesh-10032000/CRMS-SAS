@@ -6,7 +6,7 @@ import vglLogo from '../../assets/images/vgl-logo.jpg';
 
 export default function Login() {
   const [email, setEmail] = useState('demo@vglcrm.in');
-  const [password, setPassword] = useState('demo1234');
+  const [password, setPassword] = useState('demo123');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();

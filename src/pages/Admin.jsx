@@ -29,9 +29,23 @@ const rolePerms = {
 };
 
 export default function Admin() {
-  const { users } = useApp();
+  const { users, settings, updateSetting, rolePermissions, toggleRolePermission } = useApp();
   const [activeTab, setActiveTab] = useState('users');
   const [selectedRole, setSelectedRole] = useState('Sales Rep');
+
+  const handleUpdateSetting = (category, key) => {
+    // Find existing setting
+    const existing = settings.find(s => s.key === key);
+    const newValue = window.prompt(`Enter new value for ${key}:`, existing ? existing.value : '');
+    if (newValue !== null) {
+      updateSetting(key, newValue, category);
+    }
+  };
+
+  const getSettingValue = (key) => {
+    const s = settings.find(setting => setting.key === key);
+    return s ? s.value : 'Not configured';
+  };
 
   return (
     <div className="animate-fade-in">
@@ -141,13 +155,19 @@ export default function Admin() {
                   <div style={{ fontSize: 'var(--text-xs)', fontWeight: 'var(--font-semibold)', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 'var(--space-3)' }}>{group.group}</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 'var(--space-3)' }}>
                     {group.perms.map(perm => {
-                      const enabled = (rolePerms[selectedRole] || []).includes(perm);
+                      const dbPerms = rolePermissions[selectedRole];
+                      const staticPerms = rolePerms[selectedRole] || [];
+                      // Use DB perms if they exist for this role, else use static fallback
+                      const enabled = dbPerms ? dbPerms.includes(perm) : staticPerms.includes(perm);
+                      
                       return (
                         <div key={perm} className="flex items-center gap-2" style={{
                           padding: 'var(--space-2) var(--space-3)', borderRadius: 'var(--radius-lg)',
                           background: enabled ? 'rgba(16,185,129,0.08)' : 'var(--bg-base)',
                           border: `1px solid ${enabled ? 'rgba(16,185,129,0.2)' : 'var(--border-subtle)'}`,
-                        }}>
+                          cursor: 'pointer', transition: 'all 0.2s'
+                        }}
+                        onClick={() => toggleRolePermission(selectedRole, perm, !enabled)}>
                           <div style={{ width: 18, height: 18, borderRadius: 4, background: enabled ? '#10b981' : 'var(--bg-elevated)', border: enabled ? 'none' : '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             {enabled ? <Check size={11} color="white" /> : <X size={11} color="var(--text-tertiary)" />}
                           </div>
@@ -164,7 +184,7 @@ export default function Admin() {
       )}
 
       {activeTab === 'settings' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 'var(--space-5)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-5)' }}>
           {[
             { title: 'General Settings', icon: Settings, items: ['Company Name', 'Timezone', 'Date Format', 'Currency', 'Language'] },
             { title: 'Security', icon: Lock, items: ['Two-Factor Auth', 'Session Timeout', 'Password Policy', 'IP Restrictions', 'Audit Logs'] },
@@ -179,9 +199,12 @@ export default function Admin() {
                 <span style={{ fontWeight: 'var(--font-bold)', color: 'var(--text-primary)' }}>{section.title}</span>
               </div>
               {section.items.map(item => (
-                <div key={item} className="flex items-center justify-between" style={{ padding: 'var(--space-3) 0', borderBottom: '1px solid var(--border-subtle)' }}>
-                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{item}</span>
-                  <button className="btn btn-ghost btn-sm">Configure</button>
+                <div key={item} className="flex items-center justify-between gap-2" style={{ padding: 'var(--space-3) 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{item}</span>
+                    <span style={{ fontSize: '10px', color: 'var(--text-brand)', fontWeight: 'var(--font-semibold)' }}>{getSettingValue(item)}</span>
+                  </div>
+                  <button className="btn btn-ghost btn-sm" onClick={() => handleUpdateSetting(section.title, item)}>Configure</button>
                 </div>
               ))}
             </div>
