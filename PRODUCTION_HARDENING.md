@@ -1,0 +1,1 @@
+Patched server with Helmet, rate limiting, CORS restrictions, health endpoint, 404 handler, env template. Remove demo credentials and use strong JWT secret.
