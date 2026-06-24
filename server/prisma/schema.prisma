@@ -1,0 +1,188 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  company   String?
+  phone     String?
+  role      String   @default("Admin") // Super Admin, Admin, Sales Representative, Staff
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leads         Lead[]
+  contacts      Contact[]
+  tasks         Task[]
+  deals         Deal[]
+  activityLogs  ActivityLog[]
+  notifications Notification[]
+  events        CalendarEvent[]
+  projects      Project[]
+  invoices      Invoice[]
+  tickets       Ticket[]
+  messages      Message[]
+}
+
+model Lead {
+  id           String   @id @default(uuid())
+  name         String
+  company      String
+  email        String?
+  phone        String?
+  source       String   @default("Website")
+  status       String   @default("New") // New, Contacted, Qualified, Proposal Sent, Negotiation, Won, Lost
+  score        Int      @default(0)
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  assignedToId String
+  assignedTo   User     @relation(fields: [assignedToId], references: [id])
+}
+
+model Contact {
+  id           String   @id @default(uuid())
+  name         String
+  email        String?
+  phone        String?
+  role         String?
+  company      String?
+  status       String   @default("Active")
+  lastContact  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignedToId String
+  assignedTo   User      @relation(fields: [assignedToId], references: [id])
+  projects     Project[]
+}
+
+model Deal {
+  id           String   @id @default(uuid())
+  name         String
+  value        Float    @default(0)
+  company      String?
+  probability  Int      @default(50)
+  expectedDate DateTime?
+  status       String   @default("New") // This represents the column: New, Contacted, Proposal, Won
+  order        Int      @default(0) // For Kanban drag and drop ordering
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignedToId String
+  assignedTo   User     @relation(fields: [assignedToId], references: [id])
+}
+
+model Task {
+  id           String   @id @default(uuid())
+  title        String
+  type         String   @default("To Do") // Call, Email, Meeting, To Do
+  dueDate      DateTime?
+  priority     String   @default("Medium") // High, Medium, Low
+  status       String   @default("Todo") // Todo, Done
+  completed    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignedToId String
+  assignedTo   User     @relation(fields: [assignedToId], references: [id])
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  action    String   // e.g., "Created Lead", "Updated Task"
+  details   String?
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  type      String   @default("info")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model CalendarEvent {
+  id           String    @id @default(uuid())
+  title        String
+  date         String    // YYYY-MM-DD
+  time         String
+  duration     String    @default("1h")
+  type         String    @default("meeting") // meeting, call, task
+  
+  leadId       String?
+  contactId    String?
+  projectId    String?
+
+  assignedToId String
+  assignedTo   User      @relation(fields: [assignedToId], references: [id])
+}
+
+model Project {
+  id           String    @id @default(uuid())
+  name         String
+  status       String    @default("Active") // Active, Planning, Completed, On Hold
+  progress     Int       @default(0)
+  dueDate      DateTime?
+  
+  // Implicit many-to-many relationship for contacts assigned to project
+  contacts     Contact[] 
+
+  assignedToId String
+  assignedTo   User      @relation(fields: [assignedToId], references: [id])
+}
+
+model Invoice {
+  id           String    @id @default(uuid())
+  client       String
+  amount       Float
+  date         String
+  status       String    @default("Draft") // Draft, Sent, Paid, Overdue
+
+  assignedToId String
+  assignedTo   User      @relation(fields: [assignedToId], references: [id])
+}
+
+model Ticket {
+  id           String    @id @default(uuid())
+  subject      String
+  priority     String    @default("Medium") // High, Medium, Low
+  status       String    @default("Open") // Open, In Progress, Resolved
+  contactId    String?   // The contact who reported it
+  
+  createdAt    DateTime  @default(now())
+
+  assignedToId String
+  assignedTo   User      @relation(fields: [assignedToId], references: [id])
+}
+
+model Message {
+  id           String    @id @default(uuid())
+  type         String    // WhatsApp, Email, SMS
+  content      String
+  contactName  String
+  time         String
+  direction    String    @default("inbound") // inbound, outbound
+
+  assignedToId String
+  assignedTo   User      @relation(fields: [assignedToId], references: [id])
+}
